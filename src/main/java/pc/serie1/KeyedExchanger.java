@@ -12,17 +12,17 @@ import java.util.concurrent.locks.ReentrantLock;
 public class KeyedExchanger<T> {
 
     private class DataHolder {
-        public final Optional<T> myData;
-        public Optional<T> otherData;
-        public Condition cond;
-        public boolean wasMatched = false;
+        final Optional<T> myData;
+        Optional<T> otherData;
+        Condition cond;
+        boolean wasMatched = false;
 
-        public DataHolder(T data, Condition cond) {
+        DataHolder(T data, Condition cond) {
             myData = Optional.of(data);
             this.cond = cond;
         }
 
-        public Optional<T> setAndGet(T dataToSet) {
+        Optional<T> setAndGet(T dataToSet) {
             otherData = Optional.of(dataToSet);
             wasMatched = true;
             return myData;
@@ -30,7 +30,7 @@ public class KeyedExchanger<T> {
     }
 
     private final Lock mon = new ReentrantLock();
-    private final Map<Integer, DataHolder> keysMap = new HashMap<Integer, DataHolder>();
+    private final Map<Integer, DataHolder> keysMap = new HashMap<>();
 
     public Optional<T> exchange(int ky, T mydata, int timeout) throws InterruptedException {
         try {
@@ -49,8 +49,8 @@ public class KeyedExchanger<T> {
                 return Optional.empty();
 
             //wait to exchange
-            long t = Timeouts.start(timeout);
-            long remaining = Timeouts.remaining(t);
+            long targetTime = Timeouts.start(timeout);
+            long remaining = Timeouts.remaining(targetTime);
 
             holder = new DataHolder(mydata, mon.newCondition());
             keysMap.put(ky, holder);
@@ -66,7 +66,7 @@ public class KeyedExchanger<T> {
                 if (holder.wasMatched)
                     return holder.otherData;
 
-                remaining = Timeouts.remaining(t);
+                remaining = Timeouts.remaining(targetTime);
                 if (Timeouts.isTimeout(remaining))
                     return Optional.empty();
             }
