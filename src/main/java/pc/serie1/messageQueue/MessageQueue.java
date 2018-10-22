@@ -1,8 +1,8 @@
 package pc.serie1.messageQueue;
 
 import pc.utils.Timeouts;
-import java.util.LinkedList;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -11,20 +11,20 @@ import java.util.concurrent.locks.ReentrantLock;
 public class MessageQueue<T> {
 
     private final Lock mon = new ReentrantLock();
-    private final LinkedList<WaitingStatus> messages = new LinkedList<>();
-    private final LinkedList<Receiver> receivers = new LinkedList<>();
+    private final ConcurrentLinkedQueue<WaitingStatus> messages = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<Receiver> receivers = new ConcurrentLinkedQueue<>();
 
     public SendStatus send(T sentMsg) {
         try {
             mon.lock();
             if(!receivers.isEmpty()) {
-                Receiver receiver = receivers.pollFirst();
+                Receiver receiver = receivers.poll();
                 receiver.message = sentMsg;
                 receiver.condition.signal();
                 return new DeliveredStatus();
             } else {
                 WaitingStatus mStatus = new WaitingStatus(sentMsg);
-                messages.addLast(mStatus);
+                messages.add(mStatus);
                 return mStatus;
             }
         } finally {
@@ -38,7 +38,7 @@ public class MessageQueue<T> {
 
             //fast path
             if(!messages.isEmpty()) {
-                WaitingStatus mStatus = messages.pollFirst();
+                WaitingStatus mStatus = messages.poll();
                 mStatus.setAsSentAndSignal();
                 return Optional.of(mStatus.message);
             }
@@ -51,7 +51,7 @@ public class MessageQueue<T> {
             long remaining = Timeouts.remaining(targetTime);
 
             Receiver receiver = new Receiver(mon.newCondition());
-            receivers.addLast(receiver);
+            receivers.add(receiver);
             while (true) {
                 try {
                     receiver.condition.await(remaining, TimeUnit.MILLISECONDS);
@@ -99,6 +99,8 @@ public class MessageQueue<T> {
 
         WaitingStatus(T message) {
             this.message = message;
+            isSent = false;
+            canceled = false;
         }
 
         void setAsSentAndSignal() {
