@@ -10,11 +10,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class SimpleThreadPoolExecutor {
 
-    private Lock lock = new ReentrantLock();
+    private final Lock lock = new ReentrantLock();
     private final Condition waitTermination = lock.newCondition();
 
-    private LinkedList<WorkUnit> workToExecute = new LinkedList<>();
-    private LinkedList<WorkerThread> workersWaiting = new LinkedList<>();
+    private final LinkedList<WorkUnit> workToExecute = new LinkedList<>();
+    private final LinkedList<WorkerThread> workersWaiting = new LinkedList<>();
 
     private final int maxPoolSize, keepAliveTime;
     private boolean shuttingDown = false;
