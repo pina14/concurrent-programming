@@ -114,6 +114,9 @@ public class EventBus {
 
             shuttingDown = true;
 
+            if(subscribers.isEmpty())
+                return;
+
             subscribers.values().forEach(eventSubscribers -> eventSubscribers.waitEvent.signalAll());
 
             while(true) {
