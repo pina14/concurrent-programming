@@ -60,15 +60,17 @@ public class KeyedExchanger<T> {
                 } catch (InterruptedException e) {
                     if (holder.wasMatched)
                         return holder.otherData;
-
+                    keysMap.remove(ky);
                     throw e;
                 }
                 if (holder.wasMatched)
                     return holder.otherData;
 
                 remaining = Timeouts.remaining(targetTime);
-                if (Timeouts.isTimeout(remaining))
+                if (Timeouts.isTimeout(remaining)) {
+                    keysMap.remove(ky);
                     return Optional.empty();
+                }
             }
         } finally {
             mon.unlock();

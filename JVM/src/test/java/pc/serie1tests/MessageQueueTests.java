@@ -86,12 +86,33 @@ public class MessageQueueTests {
             h.createAndStart(() -> {
                 SendStatus status = q.send(message);
                 boolean wasDelivered = status.await(2000);
-                if(wasDelivered)
-                    Assert.assertFalse(true);
+                Assert.assertFalse(wasDelivered);
             });
         }
 
         h.join();
+    }
+
+    @Test
+    public void test_SendStatus_await_interrupt() throws InterruptedException {
+        MessageQueue<Integer> q = new MessageQueue<>();
+
+        Helper h = new Helper();
+
+        for (int i = 0; i < 10; i++) {
+            Integer message = i;
+            h.createAndStart(() -> {
+                try {
+                    SendStatus status = q.send(message);
+                    status.await(2000);
+                    Assert.assertTrue(false);
+                } catch (InterruptedException e) {
+                    Assert.assertTrue(true);
+                }
+            });
+        }
+
+        h.interruptAndJoin();
     }
 
     @Test
@@ -107,6 +128,44 @@ public class MessageQueueTests {
                     Assert.assertFalse(true);
             });
         }
+
+        h.join();
+
+        //Test that the receivers were removed when timeout occurred
+        h.createAndStart(() -> {
+            SendStatus status = q.send(1);
+            boolean wasDelivered = status.await(2000);
+            Assert.assertFalse(wasDelivered);
+        });
+
+        h.join();
+    }
+
+    @Test
+    public void test_receive_interrupt() throws InterruptedException {
+        MessageQueue<Integer> q = new MessageQueue<>();
+
+        Helper h = new Helper();
+
+        for (int i = 0; i < 10; i++) {
+            h.createAndStart(() -> {
+                try {
+                    q.receive(2000);
+                    Assert.assertTrue(false);
+                } catch (InterruptedException e) {
+                    Assert.assertTrue(true);
+                }
+            });
+        }
+
+        h.interruptAndJoin();
+
+        //Test that the receivers were removed when thread was interrupted
+        h.createAndStart(() -> {
+            SendStatus status = q.send(1);
+            boolean wasDelivered = status.await(2000);
+            Assert.assertFalse(wasDelivered);
+        });
 
         h.join();
     }

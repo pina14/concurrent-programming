@@ -90,11 +90,20 @@ public class KeyedExchangerTests {
     public void test_timeout() throws InterruptedException {
         KeyedExchanger<String> exchanger = new KeyedExchanger<>();
         String str1 = "a";
+        String str2 = "b";
 
         Helper h = new Helper();
 
         h.createAndStart(() -> {
             Optional res = exchanger.exchange(1, str1, 1000);
+            Assert.assertFalse(res.isPresent());
+        });
+
+        h.join();
+
+        //Test that the key was removed when timeout occurred
+        h.createAndStart(() -> {
+            Optional res = exchanger.exchange(1, str2, 1000);
             Assert.assertFalse(res.isPresent());
         });
 
@@ -105,6 +114,7 @@ public class KeyedExchangerTests {
     public void test_interrupt() throws InterruptedException {
         KeyedExchanger<String> exchanger = new KeyedExchanger<>();
         String str1 = "a";
+        String str2 = "b";
 
         Helper h = new Helper();
 
@@ -118,5 +128,13 @@ public class KeyedExchangerTests {
         });
 
         h.interruptAndJoin();
+
+        //Test that the key was removed when thread was interrupted
+        h.createAndStart(() -> {
+            Optional res = exchanger.exchange(1, str2, 1000);
+            Assert.assertFalse(res.isPresent());
+        });
+
+        h.join();
     }
 }

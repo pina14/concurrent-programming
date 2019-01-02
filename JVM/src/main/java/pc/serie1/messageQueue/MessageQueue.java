@@ -1,8 +1,9 @@
 package pc.serie1.messageQueue;
 
 import pc.utils.Timeouts;
+
+import java.util.LinkedList;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -11,8 +12,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public class MessageQueue<T> {
 
     private final Lock mon = new ReentrantLock();
-    private final ConcurrentLinkedQueue<WaitingStatus> messages = new ConcurrentLinkedQueue<>();
-    private final ConcurrentLinkedQueue<Receiver> receivers = new ConcurrentLinkedQueue<>();
+    private final LinkedList<WaitingStatus> messages = new LinkedList<>();
+    private final LinkedList<Receiver> receivers = new LinkedList<>();
 
     public SendStatus send(T sentMsg) {
         try {
@@ -58,6 +59,7 @@ public class MessageQueue<T> {
                 } catch (InterruptedException e) {
                     if (receiver.hasReceived())
                         return Optional.of(receiver.message);
+                    receivers.remove(receiver);
                     throw e;
                 }
 
@@ -65,8 +67,10 @@ public class MessageQueue<T> {
                     return Optional.of(receiver.message);
 
                 remaining = Timeouts.remaining(targetTime);
-                if (Timeouts.isTimeout(remaining))
+                if (Timeouts.isTimeout(remaining)) {
+                    receivers.remove(receiver);
                     return Optional.empty();
+                }
             }
         } finally {
             mon.unlock();
