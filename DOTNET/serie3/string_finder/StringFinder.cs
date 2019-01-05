@@ -29,8 +29,7 @@ namespace string_finder
                 tasks[index] = SearchFile(curFile, textToSearch);
             });
 
-            foreach (Task t in tasks)
-                await t;
+            Task.WaitAll(tasks);
         }
 
         /**
